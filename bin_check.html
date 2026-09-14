@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bin Check — Component Inventory</title>
+<style>
+  :root {
+    --bg: #0d1210;
+    --bg-panel: #131a17;
+    --bg-row: #101613;
+    --bg-row-alt: #121a16;
+    --line: #22302a;
+    --line-soft: #1a2521;
+    --copper: #c97a4a;
+    --copper-bright: #e8934f;
+    --silk: #d9e2dc;
+    --silk-dim: #8ba69a;
+    --silk-faint: #5c7168;
+    --green-led: #6fcf97;
+    --amber: #e0b355;
+    --mono: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+    --sans: "IBM Plex Sans", "Inter", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    background-image:
+      linear-gradient(var(--line-soft) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line-soft) 1px, transparent 1px);
+    background-size: 28px 28px;
+    color: var(--silk);
+    font-family: var(--sans);
+    min-height: 100vh;
+    padding: 22px 16px 60px;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; }
+
+  header {
+    margin-bottom: 22px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--line);
+  }
+  .eyebrow-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  h1 {
+    font-family: var(--mono);
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0;
+    letter-spacing: -0.01em;
+    color: var(--silk);
+  }
+  h1 span { color: var(--copper-bright); }
+  .stat {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    color: var(--silk-dim);
+  }
+  .stat b { color: var(--amber); font-weight: 600; }
+
+  .search-box {
+    margin-top: 16px;
+    position: relative;
+  }
+  .search-box input {
+    width: 100%;
+    background: var(--bg-panel);
+    border: 1px solid var(--line);
+    color: var(--silk);
+    font-family: var(--mono);
+    font-size: 0.95rem;
+    padding: 13px 14px 13px 38px;
+    border-radius: 3px;
+    outline: none;
+    transition: border-color 0.15s ease;
+  }
+  .search-box input:focus { border-color: var(--copper); }
+  .search-box input::placeholder { color: var(--silk-faint); }
+  .search-box::before {
+    content: "⌕";
+    position: absolute;
+    left: 13px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--silk-faint);
+    font-size: 1.1rem;
+    pointer-events: none;
+  }
+
+  .filter-row {
+    display: flex;
+    gap: 6px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+  .chip {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--silk-dim);
+    background: var(--bg-panel);
+    border: 1px solid var(--line);
+    padding: 5px 10px;
+    border-radius: 20px;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.12s ease;
+  }
+  .chip:hover { border-color: var(--silk-faint); color: var(--silk); }
+  .chip.active {
+    background: rgba(201,122,74,0.14);
+    border-color: var(--copper);
+    color: var(--copper-bright);
+  }
+
+  #results { margin-top: 18px; }
+  .count-line {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--silk-faint);
+    margin-bottom: 10px;
+    padding-left: 2px;
+  }
+
+  .part-card {
+    background: var(--bg-row);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--line);
+    border-radius: 2px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    transition: border-left-color 0.15s ease;
+  }
+  .part-card:hover { border-left-color: var(--copper); }
+
+  .part-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .part-desc {
+    font-size: 0.92rem;
+    color: var(--silk);
+    line-height: 1.35;
+    flex: 1;
+  }
+  .qty-pill {
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--green-led);
+    background: rgba(111,207,151,0.08);
+    border: 1px solid rgba(111,207,151,0.25);
+    padding: 3px 9px;
+    border-radius: 3px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .qty-pill .unit { color: var(--silk-faint); font-weight: 400; font-size: 0.72rem; }
+
+  .part-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    margin-top: 8px;
+    font-family: var(--mono);
+    font-size: 0.74rem;
+    color: var(--silk-dim);
+  }
+  .part-meta .m-label { color: var(--silk-faint); }
+  .footprint-tag {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    background: var(--bg-panel);
+    border: 1px solid var(--line);
+    color: var(--amber);
+    padding: 1px 7px;
+    border-radius: 3px;
+  }
+
+  .part-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+    padding-top: 9px;
+    border-top: 1px solid var(--line-soft);
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .orders-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+  .order-tag {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    color: var(--silk-faint);
+    background: var(--bg-panel);
+    padding: 2px 7px;
+    border-radius: 3px;
+    border: 1px solid var(--line-soft);
+  }
+  .lcsc-link {
+    font-family: var(--mono);
+    font-size: 0.76rem;
+    color: var(--copper-bright);
+    text-decoration: none;
+    border-bottom: 1px solid rgba(201,122,74,0.35);
+    padding-bottom: 1px;
+    white-space: nowrap;
+  }
+  .lcsc-link:hover { color: var(--amber); border-color: var(--amber); }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--silk-faint);
+    font-family: var(--mono);
+    font-size: 0.85rem;
+  }
+
+  ::selection { background: rgba(201,122,74,0.3); }
+
+  @media (max-width: 480px) {
+    h1 { font-size: 1.25rem; }
+    .part-desc { font-size: 0.88rem; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow-row">
+      <h1>bin<span>check</span></h1>
+      <div class="stat"><b id="totalParts">0</b> parts on hand · <b id="totalOrders">10</b> orders</div>
+    </div>
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="search description, LCSC #, MPN, package, manufacturer…" autocomplete="off">
+    </div>
+    <div class="filter-row" id="filterRow"></div>
+  </header>
+
+  <div id="results">
+    <div class="count-line" id="countLine"></div>
+    <div id="cardContainer"></div>
+  </div>
+</div>
+
+<script>
+const PARTS = [{"lcsc":"C370381","mpn":"SDWL2012C39NJSTF","manufacturer":"Sunlord","package":"-","description":"-","unit_price":"0.0743","total_qty":30,"orders":[{"order_id":"WM2407100046","order_date":"2024-07-10","qty":"30"}]},{"lcsc":"C125969","mpn":"SX1280IMLTRT","manufacturer":"SEMTECH","package":"QFN-24-EP(4x4)","description":"-132dBm 2.4GHz~2.5GHz 2.4GHz 1.8V~3.7V QFN-24-EP(4x4) RF Transceiver ICs RoHS","unit_price":"4.6565","total_qty":10,"orders":[{"order_id":"WM2412100170","order_date":"2024-12-10","qty":"10"}]},{"lcsc":"C5248080","mpn":"HS96L03W2C03","manufacturer":"HS","package":"-","description":"0.96 128x64 SSD1315 chip I2C LCD, OLED, Graphic","unit_price":"1.6196","total_qty":10,"orders":[{"order_id":"WM2309240030","order_date":"2023-09-24","qty":"10"}]},{"lcsc":"C106231","mpn":"RC0402FR-070RL","manufacturer":"YAGEO","package":"0402","description":"0\u03a9 62.5mW 50V Thick Film Resistor \u00b11% 0402 Chip Resistor - Surface Mount RoHS","unit_price":"0.0008","total_qty":100,"orders":[{"order_id":"WM2605020047","order_date":"2026-05-02","qty":"100"}]},{"lcsc":"C2906976","mpn":"FRC0603F1201TS","manufacturer":"FOJAN","package":"0603","description":"1.2k\u03a9 \u00b11% 100mW 0603 Thick Film Resistor","unit_price":"0.001","total_qty":100,"orders":[{"order_id":"WM2506180533","order_date":"2025-06-18","qty":"100"}]},{"lcsc":"C504891","mpn":"SI5351A-B-GTR","manufacturer":"SILICON LABS","package":"MSOP-10","description":"1.71V~3.6V 200MHz I2C CMOS 3 MSOP-10 Clock Generators, PLLs, Frequency Synthesizers RoHS","unit_price":"1.4671","total_qty":6,"orders":[{"order_id":"WM2604290045","order_date":"2026-04-29","qty":"6"}]},{"lcsc":"C60491","mpn":"RC0402FR-07100KL","manufacturer":"YAGEO","package":"0402","description":"100k\u03a9 62.5mW 50V Thick Film Resistor \u00b1100ppm/\u2103 \u00b11% 0402 Chip Resistor - Surface Mount RoHS","unit_price":"0.0008","total_qty":100,"orders":[{"order_id":"WM2605020047","order_date":"2026-05-02","qty":"100"}]},{"lcsc":"C49023767","mpn":"MST-12D18G4 SPDT Slide Switch","manufacturer":"SHOU HAN","package":"SMD","description":"100mA Surface Mount, Right Angle SPDT 12V Black SMD Slide Switches","unit_price":"0.0752","total_qty":10,"orders":[{"order_id":"WM2510020097","order_date":"2025-10-02","qty":"10"}]},{"lcsc":"C14675","mpn":"RC0603FR-07100KL","manufacturer":"YAGEO","package":"0603","description":"100mW 100k\u03a9 75V Thick Film Resistor \u00b1100ppm/\u2103 \u00b11% 0603 Chip Resistor - Surface Mount RoHS","unit_price":"0.001","total_qty":100,"orders":[{"order_id":"WM2506180533","order_date":"2025-06-18","qty":"100"}]},{"lcsc":"C105588","mpn":"RC0603FR-07100RL","manufacturer":"YAGEO","package":"0603","description":"100mW 100\u03a9 75V Thick Film Resistor \u00b1100ppm/\u2103 \u00b11% 0603 Chip Resistor - Surface Mount RoHS","unit_price":"0.001","total_qty":100,"orders":[{"order_id":"WM2506180533","order_date":"2025-06-18","qty":"100"}]},{"lcsc":"C3017715","mpn":"SCR0603J10K","manufacturer":"VO","package":"0603","description":"100mW 10k\u03a9 75V Thick Film Resistor \u00b1200ppm/\u2103 \u00b15% 0603 Chip Resistor - Surface Mount","unit_price":"0.0008","total_qty":400,"orders":[{"order_id":"WM2309240030","order_date":"2023-09-24","qty":"400"}]},{"lcsc":"C22548","mpn":"RC0603FR-071KL","manufacturer":"YAGEO","package":"0603","description":"100mW 1k\u03a9 75V Thick Film Resistor \u00b1100ppm/\u2103 \u00b11% 0603 Chip Resistor - Surface Mount RoHS","unit_price":"0.001","total_qty":100,"orders":[{"order_id":"WM2501110169","order_date":"2025-01-11","qty":"100"}]},{"lcsc":"C2889399","mpn":"0603 \u00b15% 2K","manufacturer":"VO","package":"0603","description":"100mW 2k\u03a9 75V Thick Film Resistor \u00b1100ppm/\u2103 \u00b15% 0603 Chip Resistor - Surface Mount","unit_price":"0.0004","total_qty":100,"orders":[{"order_id":"WM2501110169","order_date":"2025-01-11","qty":"100"}]},{"lcsc":"C114669","mpn":"RC0603FR-07470RL","manufacturer":"YAGEO","package":"0603","description":"100mW 470\u03a9 75V Thick Film Resistor \u00b1100ppm/\u2103 \u00b11% 0603 Chip Resistor - Surface Mount RoHS","unit_price":"0.0012","total_qty":100,"orders":[{"order_id":"WM2506180533","order_date":"2025-06-18","qty":"100"}]},{"lcsc":"C252670","mpn":"MA251220JR100FZ","manufacturer":"Ever Ohms Tech","package":"2512","description":"100m\u03a9 \u00b15% 2W Current Sense Resistor","unit_price":"0.1223","total_qty":15,"orders":[{"order_id":"WM2309240030","order_date":"2023-09-24","qty":"15"}]},{"lcsc":"C2830721","mpn":"0805B104K500NT","manufacturer":"FH-BK(Guangdong Fenghua Bangke Elec)","package":"0805","description":"100nF X7R \u00b110% 50V 0805 Ceramic Capacitors","unit_price":"0.0038","total_qty":100,"orders":[{"order_id":"WM2309240030","order_date":"2023-09-24","qty":"100"}]},{"lcsc":"C169292","mpn":"VJ0402G104KXQCW1BC","manufacturer":"Vishay Intertech","package":"0402","description":"100nF \u00b110% 10V Ceramic Capacitor X5R 0402","unit_price":"0.0111","total_qty":50,"orders":[{"order_id":"WM2412100170","order_date":"2024-12-10","qty":"50"}]},{"lcsc":"C141382","mpn":"CT41G-0402-2X1-16V-0.1\u03bcF-K(N)","manufacturer":"TORCH","package":"0402","description":"100nF \u00b110% 16V Ceramic Capacitor 0402","unit_price":"0.0026","total_qty":200,"orders":[{"order_id":"WM2407100046","order_date":"2024-07-10","qty":"200"}]},{"lcsc":"C60474","mpn":"CC0402KRX7R7BB104","manufacturer":"YAGEO","package":"0402","description":"100nF \u00b110% 16V Ceramic Capacitor X7R 0402","unit_price":"0.0011","total_qty":200,"orders":[{"order_id":"WM2604290045","order_date":"2026-04-29","qty":"200"}]},{"lcsc":"C694249","mpn":"0603B104K250NT","manufacturer":"FH (Guangdong Fenghua Advanced Tech)","package":"0603","description":"100nF \u00b110% 25V Ceramic Capacitor X7R 0603","unit_price":"0.0025","total_qty":100,"orders":[{"order_id":"WM2309240030","order_date":"2023-09-24","qty":"100"}]},{"lcsc":"C14663","mpn":"CC0603KRX7R9BB104","manufacturer":"YAGEO","package":"0603","description":"100nF \u00b110% 50V Ceramic Capacitor X7R 0603","unit_price":"0.0019","total_qty":500,"orders":[{"order_id":"WM2403300155","order_date":"2024-03-30","qty":"300"},{"order_id":"WM2407100046","order_date":"2024-07-10","qty":"200"}]},{"lcsc":"C2933066","mpn":"FRC0402F1023TS","manufacturer":"FOJAN","package":"0402","description":"102k\u03a9 \u00b11% 62.5mW 0402 Thick Film Resistor","unit_price":"0.0004","total_qty":200,"orders":[{"order_id":"WM2407100046","order_date":"2024-07-10","qty":"200"}]},{"lcsc":"C470892","mpn":"PE4259-63","manufacturer":"pSemi","package":"SC-70-6","description":"10MHz~3GHz SC-70-6 RF Switches RoHS","unit_price":"0.4541","total_qty":15,"orders":[{"order_id":"WM2412100170","order_date":"2024-12-10","qty":"15"}]},{"lcsc":"C25804","mpn":"0603WAF1002T5E","manufacturer":"UNI-ROYAL(Uniroyal Elec)","package":"0603","description":"10k\u03a9 \u00b11% 100mW 0603 Thick Film Resistor","unit_price":"0.001","total_qty":300,"orders":[{"order_id":"WM2403300155","order_date":"2024-03-30","qty":"300"}]},{"lcsc":"C5137480","mpn":"FCC0402B103K500AT","manufacturer":"FOJAN","package":"0402","description":"10nF \u00b110% 50V Ceramic Capacitor X7R 0402","unit_price":"0.0007","total_qty":100,"orders":[{"order_id":"WM2412100170","order_date":"2024-12-10","qty":"100"}]},{"lcsc":"C60133","mpn":"CC0402KRX7R9BB103","manufacturer":"YAGEO","package":"0402","description":"10nF \u00b110% 50V Ceramic Capacitor X7R 0402","unit_price":"0.0011","total_qty":100,"orders":[{"order_id":"WM2604290045","order_date":"2026-04-29","qty":"100"}]},{"lcsc":"C32949","mpn":"CL05C100JB5NNNC","manufacturer":"Samsung Electro-Mechanics","package":"0402","description":"10pF \u00b15% 50V Ceramic Capacitor C0G 0402","unit_price":"0.0045","total_qty":50,"orders":[{"order_id":"WM2605020047","order_date":"2026-05-02","qty":"50"}]},{"lcsc":"C19702","mpn":"CL10A106KP8NNNC","manufacturer":"Samsung Electro-Mechanics","package":"0603","description":"10uF \u00b110% 10V Ceramic Capacitor X5R 0603","unit_price":"0.0054","total_qty":300,"orders":[{"order_id":"WM2403300155","order_date":"2024-03-30","qty":"300"}]},{"lcsc":"C440198","mpn":"GRM21BR61H106KE43L","manufacturer":"muRata","package":"0805","description":"10uF \u00b110% 50V Ceramic Capacitor X5R 0805","unit_price":"0.0686","total_qty":10,"orders":[{"order_id":"WM2605020047","order_date":"2026-05-02","qty":"10"}]},{"lcsc":"C2840513","mpn":"0603X106K100CT","manufacturer":"Walsin Tech Corp","package":"0603","description":"10uF \u00b110% Ceramic Capacitor X5R 0603","unit_price":"0.0107","total_qty":100,"orders":[{"order_id":"WM2309240030","order_date":"2023-09-24","qty":"100"}]},{"lcsc":"C106996","mpn":"CC0402JRNPO9BN121","manufacturer":"YAGEO","package":"0402","description":"120pF \u00b15% 50V Ceramic Capacitor NP0 0402","unit_price":"0.0027","total_qty":100,"orders":[{"order_id":"WM2604290045","order_date":"2026-04-29","qty":"100"}]},{"lcsc":"C3016734","mpn":"SCR0805F10K","manufacturer":"VO","package":"0805","description":"125mW 10k\u03a9 150V Thick Film Resistor \u00b1100ppm/\u2103 \u00b11% 0805 Chip Resistor - Surface Mount","unit_price":"0.0016","total_qty":100,"orders":[{"order_id":"WM2309240030","order_date":"2023-09-24","qty":"100"}]},{"lcsc":"C97521","mpn":"W25Q128JVSIQ","manufacturer":"Winbond","package":"SOIC-8-208mil","description":"128Mbit 2.7V~3.6V 133MHz SPI SOIC-8-208mil Memory RoHS","unit_price":"1.9057","total_qty":20,"orders":[{"order_id":"WM2605020047","order_date":"2026-05-02","qty":"20"}]},{"lcsc":"C38151377","mpn":"PTS636SM43JSMTRLFS","manufacturer":"Littelfuse","package":"SMD,6x3.5mm","description":"12V 3.5mm Rectangular Button Surface Mount,Vertical 6mm SPST-NO 1.8N 50mA SMD,6x3.5mm Tactile Switches","unit_price":"0.308","total_qty":5,"orders":[{"order_id":"WM2506180533","order_date":"2025-06-18","qty":"5"}]},{"lcsc":"C49023379","mpn":"TS-6645SS4.5x4.5x6.0","manufacturer":"CAX","package":"SMD-4P,4.5x4.5mm","description":"12V Without Bracket 4.5mm Round Button No Surface Mount,Vertical SPST 4.5mm 50mA SMD-4P,4.5x4.5mm Tactile Switches","unit_price":"0.0268","total_qty":100,"orders":[{"order_id":"WM2510020097","order_date":"2025-10-02","qty":"100"}]},{"lcsc":"C114659","mpn":"RC0603FR-0712KL","manufacturer":"YAGEO","package":"0603","description":"12k\u03a9 100mW 75V Thick Film Resistor \u00b1100ppm/\u2103 \u00b11% 0603 Chip Resistor - Surface Mount RoHS","unit_price":"0.0012","total_qty":100,"orders":[{"order_id":"WM2506180533","order_date":"2025-06-18","qty":"100"}]},{"lcsc":"C22809","mpn":"0603WAF1502T5E","manufacturer":"UNI-ROYAL(Uniroyal Elec)","package":"0603","description":"15k\u03a9 \u00b11% 100mW 0603 Thick Film Resistor","unit_price":"0.0011","total_qty":200,"orders":[{"order_id":"WM2407100046","order_date":"2024-07-10","qty":"200"}]},{"lcsc":"C32180","mpn":"CSTCE16M0V53-R0","manufacturer":"Murata Electronics","package":"SMD3213-3P","description":"16MHz 15pF 40\u03a9 SMD3213-3P Resonators","unit_price":"0.2482","total_qty":5,"orders":[{"order_id":"WM2501110169","order_date":"2025-01-11","qty":"5"}]},{"lcsc":"C97627","mpn":"MS560702BA03-50","manufacturer":"TE Connectivity","package":"SMD-8P","description":"1Kpa~1.2bar SMD-8P Pressure Sensors, Transducers RoHS","unit_price":"3.4488","total_qty":2,"orders":[{"order_id":"WM2605020047","order_date":"2026-05-02","qty":"2"}]},{"lcsc":"C106235","mpn":"RC0402FR-071KL","manufacturer":"YAGEO","package":"0402","description":"1k\u03a9 62.5mW 50V Thick Film Resistor \u00b1100ppm/\u2103 \u00b11% 0402 Chip Resistor - Surface Mount RoHS","unit_price":"0.0006","total_qty":200,"orders":[{"order_id":"WM2412100170","order_date":"2024-12-10","qty":"100"},{"order_id":"WM2604290045","order_date":"2026-04-29","qty":"100"}]},{"lcsc":"C100040","mpn":"CC0603KRX7R9BB102","manufacturer":"YAGEO","package":"0603","description":"1nF \u00b110% 50V Ceramic Capacitor X7R 0603","unit_price":"0.0022","total_qty":100,"orders":[{"order_id":"WM2506180533","order_date":"2025-06-18","qty":"100"}]},{"lcsc":"C14445","mpn":"CL05A105KP5NNNC","manufacturer":"Samsung Electro-Mechanics","package":"0402","description":"1uF \u00b110% 10V Ceramic Capacitor X5R 0402","unit_price":"0.0015","total_qty":200,"orders":[{"order_id":"WM2412100170","order_date":"2024-12-10","qty":"100"},{"order_id":"WM2604290045","order_date":"2026-04-29","qty":"100"}]},{"lcsc":"C7503520","mpn":"CGA0402X5R105K100GT","manufacturer":"HRE","package":"0402","description":"1uF \u00b110% 10V Ceramic Capacitor X5R 0402","unit_price":"0.0024","total_qty":100,"orders":[{"order_id":"WM2605020047","order_date":"2026-05-02","qty":"100"}]},{"lcsc":"C15849","mpn":"CL10A105KB8NNNC","manufacturer":"Samsung Electro-Mechanics","package":"0603","description":"1uF \u00b110% 50V Ceramic Capacitor X5R 0603","unit_price":"0.0037","total_qty":50,"orders":[{"order_id":"WM2501110169","order_date":"2025-01-11","qty":"50"}]},{"lcsc":"C28323","mpn":"CL21B105KBFNNNE","manufacturer":"Samsung Electro-Mechanics","package":"0805","description":"1uF \u00b110% 50V Ceramic Capacitor X7R 0805","unit_price":"0.0134","total_qty":20,"orders":[{"order_id":"WM2605020047","order_date":"2026-05-02","qty":"20"}]},{"lcsc":"C23630","mpn":"CL10A225KO8NNNC","manufacturer":"Samsung Electro-Mechanics","package":"0603","description":"2.2uF \u00b110% 16V Ceramic Capacitor X5R 0603","unit_price":"0.0063","total_qty":50,"orders":[{"order_id":"WM2605020047","order_date":"2026-05-02","qty":"50"}]},{"lcsc":"C3013935","mpn":"ESP32-WROOM-32E-H4","manufacturer":"Espressif Systems","package":"SMD,25.5x18mm","description":"2.4GHz ESP32-DOWD-V3 On-board PCB Antenna -98dBm SMD,25.5x18mm RF Transceiver Modules and Modems RoHS","unit_price":"3.6607","total_qty":12,"orders":[{"order_id":"WM2309240030","order_date":"2023-09-24","qty":"10"},{"order_id":"WM2510020097","order_date":"2025-10-02","qty":"2"}]},{"lcsc":"C2764054","mpn":"ESP-01F-2M","manufacturer":"Ai-Thinker","package":"SMD,11x10mm","description":"2.4GHz ESP8285 Chip -90dBm SMD,11x10mm RF Transceiver Modules and Modems RoHS","unit_price":"2.0015","total_qty":10,"orders":[{"order_id":"WM2412100170","order_date":"2024-12-10","qty":"10"}]},{"lcsc":"C388043","mpn":"0603N272J500CT","manufacturer":"Walsin Tech Corp","package":"0603","description":"2.7nF \u00b15% 50V Ceramic Capacitor NP0 0603","unit_price":"0.0068","total_qty":40,"orders":[{"order_id":"WM2407100046","order_date":"2024-07-10","qty":"40"}]},{"lcsc":"C19633972","mpn":"AHW1005F-R39KTF","manufacturer":"APV","package":"0402","description":"200mA 390nH \u00b110% 1\u03a9 Wire-wound chip inductor 0402 Fixed Inductors RoHS","unit_price":"0.0849","total_qty":15,"orders":[{"order_id":"WM2604290045","order_date":"2026-04-29","qty":"15"}]},{"lcsc":"C2830320","mpn":"FS8205A","manufacturer":"TECH PUBLIC","package":"SOT-23-6","description":"20V 9A 1.5W Surface Mount SOT-23-6","unit_price":"0.0448","total_qty":10,"orders":[{"order_id":"WM2506180533","order_date":"2025-06-18","qty":"10"}]},{"lcsc":"C107000","mpn":"CC0402JRNPO9BN200","manufacturer":"YAGEO","package":"0402","description":"20pF \u00b15% 50V Ceramic Capacitor NP0 0402","unit_price":"0.0012","total_qty":100,"orders":[{"order_id":"WM2605020047","order_date":"2026-05-02","qty":"100"}]},{"lcsc":"C1530","mpn":"0402B221K500NT","manufacturer":"FH","package":"0402","description":"220pF \u00b110% 50V Ceramic Capacitor X7R 0402","unit_price":"0.0011","total_qty":100,"orders":[{"order_id":"WM2604290045","order_date":"2026-04-29","qty":"100"}]},{"lcsc":"C6119868","mpn":"CGA0603X5R226M160JT","manufacturer":"HRE","package":"0603","description":"22uF \u00b120% 16V Ceramic Capacitor X5R 0603","unit_price":"0.0388","total_qty":10,"orders":[{"order_id":"WM2506180533","order_date":"2025-06-18","qty":"10"}]},{"lcsc":"C319539","mpn":"AR06BTCV0510","manufacturer":"Viking Tech","package":"1206","description":"250mW 51\u03a9 200V Thin Film Resistor \u00b125ppm/\u2103 \u00b10.1% 1206 Chip Resistor - Surface Mount RoHS","unit_price":"0.0666","total_qty":70,"orders":[{"order_id":"WM2403020102","order_date":"2024-03-02","qty":"70"}]},{"lcsc":"C5119013","mpn":"TC32H4-25.000-33GNDTNL","manufacturer":"HCI","package":"SMD3225-4P","description":"25MHz SMD3225-4P Oscillators RoHS","unit_price":"1.5837","total_qty":5,"orders":[{"order_id":"WM2604290045","order_date":"2026-04-29","qty":"5"}]},{"lcsc":"C80697","mpn":"XC6204B332MR","manufacturer":"Torex Semicon","package":"SOT-23-5","description":"3.3V Positive Fixed SOT-23-5 Voltage Regulators - Linear, Low Drop Out (LDO) Regulators RoHS","unit_price":"0.2155","total_qty":30,"orders":[{"order_id":"WM2407100046","order_date":"2024-07-10","qty":"30"}]},{"lcsc":"C295712","mpn":"MCP1754T-3302E/OT","manufacturer":"MICROCHIP","package":"SOT-23-5","description":"3.3V Positive Fixed SOT-23-5 Voltage Regulators - Linear, Low Drop Out (LDO) Regulators RoHS","unit_price":"1.1479","total_qty":5,"orders":[{"order_id":"WM2604290045","order_date":"2026-04-29","qty":"5"}]},{"lcsc":"C145388","mpn":"MIC5319-3.3YD5-TR","manufacturer":"Microchip Tech","package":"TSOT-23-5","description":"3.3V Positive Fixed TSOT-23-5 Voltage Regulators - Linear, Low Drop Out (LDO) Regulators RoHS","unit_price":"1.5546","total_qty":4,"orders":[{"order_id":"WM2412100170","order_date":"2024-12-10","qty":"4"}]},{"lcsc":"C87469","mpn":"INA219AIDCNR","manufacturer":"Texas Instruments","package":"SOT-23-8","description":"300mV~26V 10uV 20uA SOT-23-8 Current Regulation/Management RoHS","unit_price":"0.8687","total_qty":10,"orders":[{"order_id":"WM2309240030","order_date":"2023-09-24","qty":"10"}]},{"lcsc":"C25159","mpn":"0402WGJ0301TCE","manufacturer":"UNI-ROYAL(Uniroyal Elec)","package":"0402","description":"300\u03a9 \u00b15% 62.5mW 0402 Thick Film Resistor","unit_price":"0.0003","total_qty":100,"orders":[{"order_id":"WM2412100170","order_date":"2024-12-10","qty":"100"}]},{"lcsc":"C23138","mpn":"0603WAF3300T5E","manufacturer":"UNI-ROYAL(Uniroyal Elec)","package":"0603","description":"330\u03a9 \u00b11% 100mW 0603 Thick Film Resistor","unit_price":"0.0011","total_qty":300,"orders":[{"order_id":"WM2403300155","order_date":"2024-03-30","qty":"300"}]},{"lcsc":"C105871","mpn":"RC0402FR-074K7L","manufacturer":"YAGEO","package":"0402","description":"4.7k\u03a9 \u00b11% 62.5mW 0402 Thick Film Resistor","unit_price":"0.0008","total_qty":200,"orders":[{"order_id":"WM2604290045","order_date":"2026-04-29","qty":"100"},{"order_id":"WM2605020047","order_date":"2026-05-02","qty":"100"}]},{"lcsc":"C69182","mpn":"0603X475K100NT","manufacturer":"FH (Guangdong Fenghua Advanced Tech)","package":"0603","description":"4.7uF \u00b110% 10V Ceramic Capacitor X5R 0603","unit_price":"0.0053","total_qty":100,"orders":[{"order_id":"WM2501110169","order_date":"2025-01-11","qty":"100"}]},{"lcsc":"C98192","mpn":"CL21A475KBQNNNE","manufacturer":"Samsung Electro-Mechanics","package":"0805","description":"4.7uF \u00b110% 50V Ceramic Capacitor X5R 0805","unit_price":"0.0209","total_qty":10,"orders":[{"order_id":"WM2605020047","order_date":"2026-05-02","qty":"10"}]},{"lcsc":"C7503515","mpn":"CGA0402X5R474K100GT","manufacturer":"HRE","package":"0402","description":"470nF \u00b110% 10V Ceramic Capacitor X5R 0402","unit_price":"0.002","total_qty":100,"orders":[{"order_id":"WM2412100170","order_date":"2024-12-10","qty":"100"}]},{"lcsc":"C92361","mpn":"CL05A474KA5NNNC","manufacturer":"Samsung Electro-Mechanics","package":"0402","description":"470nF \u00b110% 25V Ceramic Capacitor X5R 0402","unit_price":"0.0128","total_qty":10,"orders":[{"order_id":"WM2604290045","order_date":"2026-04-29","qty":"10"}]},{"lcsc":"C2907044","mpn":"FRC0603F5101TS","manufacturer":"FOJAN","package":"0603","description":"5.1k\u03a9 \u00b11% 100mW 0603 Thick Film Resistor","unit_price":"0.001","total_qty":100,"orders":[{"order_id":"WM2506180533","order_date":"2025-06-18","qty":"100"}]},{"lcsc":"C967938","mpn":"CH552E","manufacturer":"WCH(Jiangsu Qin Heng)","package":"MSOP-10","description":"51 Series 8 Bit 24MHz MSOP-10 Microcontrollers","unit_price":"0.4153","total_qty":15,"orders":[{"order_id":"WM2403300155","order_date":"2024-03-30","qty":"15"}]},{"lcsc":"C111292","mpn":"CH552G","manufacturer":"WCH(Jiangsu Qin Heng)","package":"SOP-16","description":"51 Series 8 Bit 24MHz SOP-16 Microcontrollers","unit_price":"0.5709","total_qty":5,"orders":[{"order_id":"WM2403300155","order_date":"2024-03-30","qty":"5"}]},{"lcsc":"C60490","mpn":"RC0402FR-0710KL","manufacturer":"YAGEO","package":"0402","description":"62.5mW 10k\u03a9 50V Thick Film Resistor \u00b1100ppm/\u2103 \u00b11% 0402 Chip Resistor - Surface Mount RoHS","unit_price":"0.0008","total_qty":200,"orders":[{"order_id":"WM2604290045","order_date":"2026-04-29","qty":"100"},{"order_id":"WM2605020047","order_date":"2026-05-02","qty":"100"}]},{"lcsc":"C138003","mpn":"RC0402FR-0733KL","manufacturer":"YAGEO","package":"0402","description":"62.5mW 33k\u03a9 50V Thick Film Resistor \u00b1100ppm/\u2103 \u00b11% 0402 Chip Resistor - Surface Mount RoHS","unit_price":"0.0009","total_qty":100,"orders":[{"order_id":"WM2605020047","order_date":"2026-05-02","qty":"100"}]},{"lcsc":"C400235","mpn":"CPG151101D213","manufacturer":"Kailh","package":"Through Hole","description":"70,000,000 Cycles Copper Switch 10mA 2 12V 40gf@\u00b110gf Through Hole Pushbutton Switches","unit_price":"0.243","total_qty":10,"orders":[{"order_id":"WM2403300155","order_date":"2024-03-30","qty":"10"}]},{"lcsc":"C341525","mpn":"CSTNE8M00GH5C000R0","manufacturer":"muRata","package":"SMD3213-3P","description":"8MHz 33pF 40\u03a9 SMD3213-3P Resonators RoHS","unit_price":"0.2131","total_qty":10,"orders":[{"order_id":"WM2604290045","order_date":"2026-04-29","qty":"10"}]},{"lcsc":"C230000","mpn":"AC1206JR-0791RL","manufacturer":"YAGEO","package":"1206","description":"91\u03a9 250mW 200V Thick Film Resistor \u00b1100ppm/\u2103 \u00b15% 1206 Chip Resistor - Surface Mount RoHS","unit_price":"0.0027","total_qty":50,"orders":[{"order_id":"WM2309240030","order_date":"2023-09-24","qty":"50"}]},{"lcsc":"C114409","mpn":"STM32H743VIT6","manufacturer":"ST","package":"LQFP-100(14x14)","description":"ARM Cortex-M7 32 Bit 480MHz LQFP-100(14x14) Microcontrollers RoHS","unit_price":"8.9804","total_qty":2,"orders":[{"order_id":"WM2605020047","order_date":"2026-05-02","qty":"2"}]},{"lcsc":"C14877","mpn":"ATMEGA328P-AU","manufacturer":"Microchip Tech","package":"TQFP-32(7x7)","description":"AVR 8 Bit 20MHz TQFP-32(7x7) Microcontrollers RoHS","unit_price":"2.1238","total_qty":5,"orders":[{"order_id":"WM2501110169","order_date":"2025-01-11","qty":"5"}]},{"lcsc":"C7525447","mpn":"BH-123A-A5BJ005","manufacturer":"MYOUNG","package":"-","description":"Battery Holder Cylindrical CR123A Cell","unit_price":"1.3724","total_qty":4,"orders":[{"order_id":"WM2506180533","order_date":"2025-06-18","qty":"4"}]},{"lcsc":"C2927799","mpn":"DW01A","manufacturer":"YONGYUTAI","package":"SOT-23-6","description":"Battery Protection IC Lithium-ion/Polymer SOT-23-6","unit_price":"0.026","total_qty":20,"orders":[{"order_id":"WM2506180533","order_date":"2025-06-18","qty":"20"}]},{"lcsc":"C49118395","mpn":"BH-18650-1","manufacturer":"HanElectricity","package":"Through Hole","description":"Battery holder -10\u2103~+100\u2103 18650 Through Hole Blade Type Power Connector Assemblies","unit_price":"0.241","total_qty":10,"orders":[{"order_id":"WM2510020097","order_date":"2025-10-02","qty":"10"}]},{"lcsc":"C276921","mpn":"532611271","manufacturer":"MOLEX","package":"SMD,P=1.25mm,Surface Mount,Right Angle","description":"Connector Header 12 position 1.25mm Pitch 1A Surface Mount, Right Angle -40\u2103~+105\u2103","unit_price":"0.3022","total_qty":30,"orders":[{"order_id":"WM2407100046","order_date":"2024-07-10","qty":"30"}]},{"lcsc":"C18077708","mpn":"BX-RF3-1.5Z0.6H","manufacturer":"Bossie","package":"SMD","description":"Connector Receptacle IPEX Male Pin 50\u03a9 Surface Mount","unit_price":"0.0731","total_qty":15,"orders":[{"order_id":"WM2412100170","order_date":"2024-12-10","qty":"15"}]},{"lcsc":"C5160142","mpn":"XXHBELNAOF-25MHZ","manufacturer":"TAITIEN Elec","package":"SMD3225-4P","description":"Crystal 25MHz \u00b110ppm 20pF SMD3225-4P","unit_price":"0.1208","total_qty":15,"orders":[{"order_id":"WM2407100046","order_date":"2024-07-10","qty":"15"}]},{"lcsc":"C99009","mpn":"X1A0000610006","manufacturer":"EPSON","package":"SMD2012-2P","description":"Crystal 32.768kHz \u00b120ppm 7pF 90k\u03a9 SMD2012-2P","unit_price":"0.2235","total_qty":5,"orders":[{"order_id":"WM2605020047","order_date":"2026-05-02","qty":"5"}]},{"lcsc":"C143773","mpn":"SD0805S020S1R0","manufacturer":"Kyocera AVX","package":"0805","description":"Diode 20V 1A Surface Mount 0805","unit_price":"0.215","total_qty":5,"orders":[{"order_id":"WM2605020047","order_date":"2026-05-02","qty":"5"}]},{"lcsc":"C155590","mpn":"BAT20JFILM","manufacturer":"ST","package":"SOD-323","description":"Diode 23V 1A Surface Mount SOD-323","unit_price":"0.0628","total_qty":10,"orders":[{"order_id":"WM2604290045","order_date":"2026-04-29","qty":"10"}]},{"lcsc":"C916424","mpn":"BAT54C","manufacturer":"JSMSEMI","package":"SOT-23","description":"Diode Array 1 Pair Common Cathode 30V 200mA Surface Mount SOT-23","unit_price":"0.0071","total_qty":100,"orders":[{"order_id":"WM2605020047","order_date":"2026-05-02","qty":"100"}]},{"lcsc":"C74338","mpn":"16-213/GHC-YR1S1/3T","manufacturer":"Everlight Elec","package":"0402","description":"Emerald Green 518nm LED Indication - Discrete 0402","unit_price":"0.0532","total_qty":20,"orders":[{"order_id":"WM2412100170","order_date":"2024-12-10","qty":"20"}]},{"lcsc":"C12065","mpn":"LTST-C193TGKT-5A","manufacturer":"Lite-On","package":"0603","description":"Emerald Green 525nm LED Indication - Discrete 2.8V 0603","unit_price":"0.0295","total_qty":20,"orders":[{"order_id":"WM2506180533","order_date":"2025-06-18","qty":"20"}]},{"lcsc":"C500193","mpn":"X10B25U15T","manufacturer":"XKB Connection","package":"SMD,P=1mm,Surface Mount,Right Angle","description":"FFC/FPC Connector 15 Position 1mm Pitch Top Contact Surface Mount, Right Angle -40\u2103~+85\u2103","unit_price":"0.1455","total_qty":10,"orders":[{"order_id":"WM2407100046","order_date":"2024-07-10","qty":"10"}]},{"lcsc":"C2655096","mpn":"LSM9DS1TR","manufacturer":"ST","package":"LGA-24(3x3.5)","description":"LGA-24(3x3.5) IMUs (Inertial Measurement Units) RoHS","unit_price":"10.809","total_qty":2,"orders":[{"order_id":"WM2605020047","order_date":"2026-05-02","qty":"2"}]},{"lcsc":"C92102","mpn":"AZ1117CH-3.3TRG1","manufacturer":"Diodes Incorporated","package":"SOT-223","description":"Linear Voltage Regulator IC Positive Fixed 1 Output 1.35A SOT-223","unit_price":"0.0418","total_qty":35,"orders":[{"order_id":"WM2309240030","order_date":"2023-09-24","qty":"20"},{"order_id":"WM2506180533","order_date":"2025-06-18","qty":"5"},{"order_id":"WM2510020097","order_date":"2025-10-02","qty":"10"}]},{"lcsc":"C183178","mpn":"NCP708MU330TAG","manufacturer":"onsemi","package":"DFN-6(3x3)","description":"Linear Voltage Regulator IC Positive Fixed 1 Output 1A DFN-6(3x3)","unit_price":"0.6139","total_qty":5,"orders":[{"order_id":"WM2605020047","order_date":"2026-05-02","qty":"5"}]},{"lcsc":"C308598","mpn":"BD450M5FP-CE2","manufacturer":"ROHM Semicon","package":"TO-252","description":"Linear Voltage Regulator IC Positive Fixed 1 Output 500mA TO-252","unit_price":"0.5473","total_qty":10,"orders":[{"order_id":"WM2309240030","order_date":"2023-09-24","qty":"10"}]},{"lcsc":"C725790","mpn":"TP4056","manufacturer":"UMW(Youtai Semiconductor Co., Ltd.)","package":"ESOP-8","description":"Lithium Battery 1A ESOP-8 Battery Management RoHS","unit_price":"0.0659","total_qty":10,"orders":[{"order_id":"WM2506180533","order_date":"2025-06-18","qty":"10"}]},{"lcsc":"C341092","mpn":"HYC77-TF09-200","manufacturer":"HOAUC","package":"SMD","description":"Micro SD card (TF card) Connector and Ejector Push-Push Surface Mount","unit_price":"0.1283","total_qty":15,"orders":[{"order_id":"WM2309240030","order_date":"2023-09-24","qty":"15"}]},{"lcsc":"C597972","mpn":"DM3BT-DSF-PEJS","manufacturer":"HRS","package":"SMD","description":"Micro SD card (TF card) Connector and Ejector Push-Push Surface Mount","unit_price":"2.4073","total_qty":2,"orders":[{"order_id":"WM2605020047","order_date":"2026-05-02","qty":"2"}]},{"lcsc":"C2940630","mpn":"DMP2305U","manufacturer":"TECH PUBLIC","package":"SOT-23","description":"P-Channel 20V 4.1A 1.7W Surface Mount SOT-23","unit_price":"0.0964","total_qty":5,"orders":[{"order_id":"WM2604290045","order_date":"2026-04-29","qty":"5"}]},{"lcsc":"C125099","mpn":"LTST-C191KRKT","manufacturer":"Lite-On","package":"0603","description":"Red 639nm LED Indication - Discrete 2V 0603","unit_price":"0.0173","total_qty":50,"orders":[{"order_id":"WM2506180533","order_date":"2025-06-18","qty":"50"}]},{"lcsc":"C2976072","mpn":"WS2812C-2020-V1","manufacturer":"Worldsemi","package":"SMD,2x2mm","description":"SMD,2x2mm LED Addressable, Specialty RoHS","unit_price":"0.0663","total_qty":135,"orders":[{"order_id":"WM2403300155","order_date":"2024-03-30","qty":"130"},{"order_id":"WM2506180533","order_date":"2025-06-18","qty":"5"}]},{"lcsc":"C2843785","mpn":"XL-5050RGBC-WS2812B","manufacturer":"XINGLIGHT","package":"SMD5050-4P","description":"SMD5050-4P LED Addressable, Specialty RoHS","unit_price":"0.0494","total_qty":20,"orders":[{"order_id":"WM2309240030","order_date":"2023-09-24","qty":"20"}]},{"lcsc":"C2800116","mpn":"OS102011MS2QN1C","manufacturer":"C&K","package":"Through Hole","description":"Slide Switch SPDT @ 12V Through Hole Rectangular Columnar","unit_price":"0.7551","total_qty":5,"orders":[{"order_id":"WM2506180533","order_date":"2025-06-18","qty":"5"}]},{"lcsc":"C41398745","mpn":"GT-TC194A-H0055-L1","manufacturer":"G-Switch","package":"SMD,2.5x1.6mm","description":"Tactile Switch SPST 160gf 0.55mm SMD (SMT) Tab 2.5mm x 1.6mm Surface Mount","unit_price":"0.0791","total_qty":15,"orders":[{"order_id":"WM2412100170","order_date":"2024-12-10","qty":"15"}]},{"lcsc":"C465999","mpn":"TS-1185-C-A-B-B","manufacturer":"XKB Connection","package":"SMD,4x3mm","description":"Tactile Switch SPST 260gf 2mm 4mm x 3mm Surface Mount","unit_price":"0.1033","total_qty":20,"orders":[{"order_id":"WM2403300155","order_date":"2024-03-30","qty":"20"}]},{"lcsc":"C2939347","mpn":"DIN-504D-M5","manufacturer":"HOOYA","package":"Through Hole","description":"Through Hole Circular Connector Assemblies","unit_price":"0.3272","total_qty":5,"orders":[{"order_id":"WM2510020097","order_date":"2025-10-02","qty":"5"}]},{"lcsc":"C143789","mpn":"PEC11R-4015F-S0024","manufacturer":"BOURNS","package":"Through Hole","description":"Through Hole Encoders RoHS","unit_price":"2.1573","total_qty":10,"orders":[{"order_id":"WM2403300155","order_date":"2024-03-30","qty":"10"}]},{"lcsc":"C265461","mpn":"UBAS-4R-D14D-4D(LF)(SN)","manufacturer":"JST","package":"Through Hole","description":"USB-A (USB TYPE-A) Receptacle Connector 4 Position Through Hole","unit_price":"0.8264","total_qty":5,"orders":[{"order_id":"WM2501110169","order_date":"2025-01-11","qty":"5"}]},{"lcsc":"C698207","mpn":"USB AF-13.7","manufacturer":"USAKRO","package":"Through Hole","description":"USB-A (USB TYPE-A) Receptacle Connector 4 Position Vertical, Flag","unit_price":"0.1046","total_qty":10,"orders":[{"order_id":"WM2309240030","order_date":"2023-09-24","qty":"10"}]},{"lcsc":"C5329561","mpn":"YTC-TC16-473","manufacturer":"YIYUAN","package":"SMD","description":"USB-C (USB TYPE-C) Receptacle Connector 16 Position Surface Mount","unit_price":"0.1159","total_qty":25,"orders":[{"order_id":"WM2309240030","order_date":"2023-09-24","qty":"15"},{"order_id":"WM2403300155","order_date":"2024-03-30","qty":"10"}]},{"lcsc":"C5184243","mpn":"USB4105-GF-A-120","manufacturer":"Global Connector Technology","package":"SMD","description":"USB-C (USB TYPE-C) Receptacle Connector 16 Position Surface Mount","unit_price":"0.9708","total_qty":5,"orders":[{"order_id":"WM2605020047","order_date":"2026-05-02","qty":"5"}]},{"lcsc":"C25170729","mpn":"YLED0805W","manufacturer":"YONGYUTAI","package":"0805","description":"White LED Indication - Discrete 2.6V~3V 0805","unit_price":"0.0111","total_qty":50,"orders":[{"order_id":"WM2605020047","order_date":"2026-05-02","qty":"50"}]},{"lcsc":"C397049","mpn":"MHT192WDT-C5","manufacturer":"MEIHUA","package":"0603","description":"White LED Indication - Discrete 3.1V 0603","unit_price":"0.026","total_qty":40,"orders":[{"order_id":"WM2407100046","order_date":"2024-07-10","qty":"40"}]},{"lcsc":"C375483","mpn":"E6C1204CWAY1UDA","manufacturer":"EKINGLUX","package":"SMD-3P,3.2x1.5mm","description":"White LED Indication - Discrete 3V SMD-3P,3.2x1.5mm","unit_price":"0.0412","total_qty":70,"orders":[{"order_id":"WM2403020102","order_date":"2024-03-02","qty":"70"}]},{"lcsc":"C545327","mpn":"BZV55B5V1","manufacturer":"LGE","package":"LL-34","description":"Zener Diode Independent 5.1V 500mW Surface Mount LL-34(Mini-MELF)","unit_price":"0.019","total_qty":50,"orders":[{"order_id":"WM2605020047","order_date":"2026-05-02","qty":"50"}]},{"lcsc":"C438901","mpn":"NX3225GA-25MHZ-STD-CRG-2","manufacturer":"NDK","package":"SMD3225-4P","description":"\u00b130ppm 8pF \u00b120ppm SMD3225-4P Crystals","unit_price":"0.2501","total_qty":5,"orders":[{"order_id":"WM2605020047","order_date":"2026-05-02","qty":"5"}]}];
+
+const totalPartsEl = document.getElementById('totalParts');
+const totalOrdersEl = document.getElementById('totalOrders');
+const cardContainer = document.getElementById('cardContainer');
+const countLine = document.getElementById('countLine');
+const searchInput = document.getElementById('searchInput');
+const filterRow = document.getElementById('filterRow');
+
+totalPartsEl.textContent = PARTS.length;
+const orderSet = new Set();
+PARTS.forEach(p => p.orders.forEach(o => orderSet.add(o.order_id)));
+totalOrdersEl.textContent = orderSet.size;
+
+// Build package-type quick filters from common categories
+function categorize(p) {
+  const d = (p.description + ' ' + p.mpn).toLowerCase();
+  if (/resistor/.test(d)) return 'Resistors';
+  if (/capacitor/.test(d)) return 'Capacitors';
+  if (/led/.test(d)) return 'LEDs';
+  if (/connector|receptacle|header/.test(d)) return 'Connectors';
+  if (/switch|button/.test(d)) return 'Switches';
+  if (/regulator|ldo/.test(d)) return 'Regulators';
+  if (/microcontroller|mcu|esp32|esp8285|stm32|atmega|ch552/.test(d)) return 'MCUs/ICs';
+  if (/crystal|oscillator|resonator/.test(d)) return 'Timing';
+  return 'Other';
+}
+PARTS.forEach(p => p._cat = categorize(p));
+const cats = ['All', ...Array.from(new Set(PARTS.map(p => p._cat))).sort()];
+let activeCat = 'All';
+
+function renderChips() {
+  filterRow.innerHTML = '';
+  cats.forEach(c => {
+    const chip = document.createElement('div');
+    chip.className = 'chip' + (c === activeCat ? ' active' : '');
+    chip.textContent = c;
+    chip.onclick = () => { activeCat = c; renderChips(); render(); };
+    filterRow.appendChild(chip);
+  });
+}
+
+function lcscUrl(id) {
+  return 'https://www.lcsc.com/search?q=' + encodeURIComponent(id);
+}
+
+function escapeHtml(s) {
+  return (s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function render() {
+  const q = searchInput.value.trim().toLowerCase();
+  let filtered = PARTS.filter(p => {
+    if (activeCat !== 'All' && p._cat !== activeCat) return false;
+    if (!q) return true;
+    const hay = [p.lcsc, p.mpn, p.manufacturer, p.package, p.description].join(' ').toLowerCase();
+    return hay.includes(q);
+  });
+
+  countLine.textContent = filtered.length + (filtered.length === 1 ? ' part' : ' parts');
+
+  if (filtered.length === 0) {
+    cardContainer.innerHTML = '<div class="empty-state">nothing on the shelf matches that.</div>';
+    return;
+  }
+
+  cardContainer.innerHTML = filtered.map(p => {
+    const ordersHtml = p.orders.map(o =>
+      '<span class="order-tag">' + escapeHtml(o.order_id) + ' · qty ' + escapeHtml(o.qty) + '</span>'
+    ).join('');
+    return '<div class="part-card">' +
+      '<div class="part-top">' +
+        '<div class="part-desc">' + escapeHtml(p.description) + '</div>' +
+        '<div class="qty-pill">' + p.total_qty + ' <span class="unit">on hand</span></div>' +
+      '</div>' +
+      '<div class="part-meta">' +
+        '<span><span class="m-label">LCSC</span> ' + escapeHtml(p.lcsc) + '</span>' +
+        '<span><span class="m-label">MPN</span> ' + escapeHtml(p.mpn) + '</span>' +
+        '<span><span class="m-label">mfr</span> ' + escapeHtml(p.manufacturer) + '</span>' +
+        '<span class="footprint-tag">' + escapeHtml(p.package) + '</span>' +
+      '</div>' +
+      '<div class="part-bottom">' +
+        '<div class="orders-list">' + ordersHtml + '</div>' +
+        '<a class="lcsc-link" href="' + lcscUrl(p.lcsc) + '" target="_blank" rel="noopener">view on LCSC →</a>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+searchInput.addEventListener('input', render);
+renderChips();
+render();
+</script>
+</body>
+</html>
